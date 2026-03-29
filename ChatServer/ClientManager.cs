@@ -1,5 +1,6 @@
 ﻿using ChatServer.Models;
 using System.Net;
+using System.Net.Mail;
 using System.Net.Sockets;
 using System.Text;
 
@@ -15,7 +16,7 @@ namespace ChatServer
         /// <summary>
         /// Synchronizes access to the client collection over more than one thread
         /// </summary>
-        private static readonly SemaphoreSlim clientLock = new(1, 1);
+        private static readonly SemaphoreSlim clientGroupLock = new(1, 1);
 
 
         /// <summary>
@@ -35,20 +36,20 @@ namespace ChatServer
                 while (true)
                 {
                     // Get stream from client
-                    TcpClient client = await listener.AcceptTcpClientAsync();
-                    var connection = new ClientConnection(client);
-                    await clientLock.WaitAsync();
+                    TcpClient inClient = await listener.AcceptTcpClientAsync();
+                    var client = new ClientConnection(inClient);
+                    await clientGroupLock.WaitAsync();
                     try
                     {
-                        clientGroup.Add(connection);
-                        Console.WriteLine($"Client {connection.Id} connected. Total clients: {clientGroup.Count}");
+                        clientGroup.Add(client);
+                        Console.WriteLine($"Client {client.Id} connected. Total clients: {clientGroup.Count}");
                     }
                     finally
                     {
-                        clientLock.Release();
+                        clientGroupLock.Release();
                     }
 
-                    _ = LoopReadClientAsync(connection);
+                    _ = LoopReadClientAsync(client);
                 }
             }
             catch (Exception ex)
@@ -57,7 +58,7 @@ namespace ChatServer
             }
         }
 
-        private async Task LoopReadClientAsync(ClientConnection connection)
+        private async Task LoopReadClientAsync(ClientConnection client)
         {
             try
             {
@@ -66,47 +67,51 @@ namespace ChatServer
                 while (true)
                 {
                     Console.WriteLine("Reading data...");
-                    int received = await connection.Stream.ReadAsync(buffer.AsMemory(0, buffer.Length));
+                    int received = await client.Stream.ReadAsync(buffer.AsMemory(0, buffer.Length));
                     if (received == 0)
                     {
-                        Console.WriteLine($"Client {connection.Id} disconnected.");
+                        Console.WriteLine($"Client {client.Id} disconnected.");
                         break;
                     }
 
-                    var message = Encoding.UTF8.GetString(buffer, 0, received);
-                    Console.WriteLine($"[{connection.Id}] {DateTime.Now}: {message}");
+                    // Copy the buffer to a new one to prevent overwriting or corrupted data when broadcasting
+                    var messageBuffer = new byte[received];
+                    Buffer.BlockCopy(buffer, 0, messageBuffer, 0, received);
 
-                    await BroadCoastByteArray(buffer, received, connection);
+                    var message = Encoding.UTF8.GetString(messageBuffer, 0, received);
+                    Console.WriteLine($"[{client.Id}] {DateTime.Now}: {message}");
+
+                    await BroadcastByteArray(messageBuffer, received, client);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in LoopReadClientAsync for {connection.Id}: {ex.Message}");
+                Console.WriteLine($"Error in LoopReadClientAsync for {client.Id}: {ex.Message}");
             }
             finally
             {
                 // Remove from client group and dispose
-                await clientLock.WaitAsync();
+                await clientGroupLock.WaitAsync();
                 try
                 {
-                    clientGroup.RemoveAll(c => c.Id == connection.Id);
-                    connection.Dispose();
-                    Console.WriteLine($"Client {connection.Id} removed. Total clients: {clientGroup.Count}");          
+                    clientGroup.RemoveAll(c => c.Id == client.Id);
+                    client.Dispose();
+                    Console.WriteLine($"Client {client.Id} removed. Total clients: {clientGroup.Count}");          
                 }
                 finally
                 {
-                    clientLock.Release();
+                    clientGroupLock.Release();
                 }
             }
         }
 
-        private async Task BroadCoastByteArray(byte[] buffer, int length, ClientConnection sender)
+        private async Task BroadcastByteArray(byte[] buffer, int length, ClientConnection sender)
         {
             try
             {
                 // Take a snapshot of client connections while locked
                 List<ClientConnection> clientsToNotify;
-                await clientLock.WaitAsync();
+                await clientGroupLock.WaitAsync();
                 try
                 {
                     clientsToNotify = clientGroup
@@ -115,7 +120,7 @@ namespace ChatServer
                 }
                 finally
                 {
-                    clientLock.Release();
+                    clientGroupLock.Release();
                 }
 
                 // Broadcast outside the lock
