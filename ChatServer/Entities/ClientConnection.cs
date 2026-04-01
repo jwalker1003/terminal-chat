@@ -1,6 +1,6 @@
 ﻿using System.Net.Sockets;
 
-namespace ChatServer.Models
+namespace ChatServer.Entities
 {
     internal class ClientConnection
     {

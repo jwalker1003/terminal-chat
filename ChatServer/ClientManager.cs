@@ -1,6 +1,5 @@
-﻿using ChatServer.Models;
+﻿using ChatServer.Entities;
 using System.Net;
-using System.Net.Mail;
 using System.Net.Sockets;
 using System.Text;
 
@@ -18,9 +17,8 @@ namespace ChatServer
         /// </summary>
         private static readonly SemaphoreSlim clientGroupLock = new(1, 1);
 
-
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <returns></returns>
         public async Task StartTcpListener()
@@ -96,7 +94,7 @@ namespace ChatServer
                 {
                     clientGroup.RemoveAll(c => c.Id == client.Id);
                     client.Dispose();
-                    Console.WriteLine($"Client {client.Id} removed. Total clients: {clientGroup.Count}");          
+                    Console.WriteLine($"Client {client.Id} removed. Total clients: {clientGroup.Count}");
                 }
                 finally
                 {
