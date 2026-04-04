@@ -4,8 +4,7 @@
     {
         public static async Task Main(string[] args)
         {
-            var clientManager = new ClientManager();
-            await clientManager.StartTcpListener();
+            await ClientManager.StartTcpListener();
         }
     }
 }

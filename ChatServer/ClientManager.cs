@@ -1,16 +1,17 @@
-﻿using ChatServer.Entities;
+﻿using Chat.Infrastructure;
+using ChatServer.Entities;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
 namespace ChatServer
 {
-    internal class ClientManager
+    internal static class ClientManager
     {
         /// <summary>
         /// Collection of currently connected clients
         /// </summary>
-        private static readonly List<ClientConnection> clientGroup = [];
+        private static readonly List<ClientConnection> clientGroup = new();
 
         /// <summary>
         /// Synchronizes access to the client collection over more than one thread
@@ -21,7 +22,7 @@ namespace ChatServer
         ///
         /// </summary>
         /// <returns></returns>
-        public async Task StartTcpListener()
+        public async static Task StartTcpListener()
         {
             try
             {
@@ -56,30 +57,24 @@ namespace ChatServer
             }
         }
 
-        private async Task LoopReadClientAsync(ClientConnection client)
+        private static async Task LoopReadClientAsync(ClientConnection client)
         {
             try
             {
-                var buffer = new byte[1_024];
-
                 while (true)
                 {
                     Console.WriteLine("Reading data...");
-                    int received = await client.Stream.ReadAsync(buffer.AsMemory(0, buffer.Length));
-                    if (received == 0)
+                    var messageBuffer = await MessageFramer.ReadMessageAsync(client.Stream);
+                    if (messageBuffer == null || messageBuffer.Length == 0)
                     {
                         Console.WriteLine($"Client {client.Id} disconnected.");
                         break;
                     }
 
-                    // Copy the buffer to a new one to prevent overwriting or corrupted data when broadcasting
-                    var messageBuffer = new byte[received];
-                    Buffer.BlockCopy(buffer, 0, messageBuffer, 0, received);
-
-                    var message = Encoding.UTF8.GetString(messageBuffer, 0, received);
+                    var message = Encoding.UTF8.GetString(messageBuffer, 0, messageBuffer.Length);
                     Console.WriteLine($"[{client.Id}] {DateTime.Now}: {message}");
 
-                    await BroadcastByteArray(messageBuffer, received, client);
+                    await BroadcastByteArray(messageBuffer, client);
                 }
             }
             catch (Exception ex)
@@ -103,7 +98,7 @@ namespace ChatServer
             }
         }
 
-        private async Task BroadcastByteArray(byte[] buffer, int length, ClientConnection sender)
+        private static async Task BroadcastByteArray(byte[] buffer, ClientConnection sender)
         {
             try
             {
@@ -126,7 +121,7 @@ namespace ChatServer
                 {
                     try
                     {
-                        await client.Stream.WriteAsync(buffer.AsMemory(0, length));
+                        await MessageFramer.WriteMessageAsync(client.Stream, buffer);
                     }
                     catch (Exception ex)
                     {
@@ -136,7 +131,7 @@ namespace ChatServer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in BroadCoastByteArray: {ex.Message}");
+                Console.WriteLine($"Error in BroadcastByteArray: {ex.Message}");
             }
         }
     }

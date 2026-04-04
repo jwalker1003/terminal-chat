@@ -1,4 +1,8 @@
+## Summary 
+This is a *sandbox* if you will to learn new concepts and generally broaden my own horizon.
+
 ## TODO 
+- [ ] Create a protocol for messages
 - [ ] Use a thread safe collection instead of the SemaphoreSlim: ConcurrenDictionary
 - [ ] Create a client application for communication  
    - [ ] Param Name and PortNum?

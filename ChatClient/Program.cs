@@ -7,8 +7,7 @@
             Console.WriteLine("Welcome to Terminal Chat!/n/n");
 
             // Main read loop is here
-            ServerConnection serverConnection = new();
-            await serverConnection.ConnectToServer();
+            await ServerConnection.ConnectToServer();
         }
     }
 }

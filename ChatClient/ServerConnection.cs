@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Chat.Infrastructure;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
@@ -6,7 +7,7 @@ namespace ChatClient
 {
     internal class ServerConnection
     {
-        public async Task ConnectToServer()
+        public static async Task ConnectToServer()
         {
             try
             {
@@ -17,7 +18,7 @@ namespace ChatClient
 
                 var stream = tcpClient.GetStream();
                 var readTask = ReadMessages(stream);
-                var writeTask = WriteMessages(stream);
+                var writeTask = HandleUserInput(stream);
 
                 await Task.WhenAny(readTask, writeTask);
             }
@@ -27,22 +28,16 @@ namespace ChatClient
             }
         }
 
-        public async Task ReadMessages(NetworkStream stream)
+        private static async Task ReadMessages(NetworkStream stream)
         {
             try
             {
-
-                await Task.Run(async () =>
+                while (true)
                 {
-                    byte[] buffer = new byte[1024];
-                    while (true)
-                    {
-                        _ = await stream.ReadAsync(buffer);
-                        var msg = Encoding.UTF8.GetString(buffer);
-                        Console.WriteLine(msg);
-                    }
-                });
-
+                    byte[] buffer = await MessageFramer.ReadMessageAsync(stream);                      
+                    var msg = Encoding.UTF8.GetString(buffer);
+                    Console.WriteLine(msg);
+                }
             }
             catch (Exception ex)
             {
@@ -50,16 +45,21 @@ namespace ChatClient
             }
         }
 
-        public async Task WriteMessages(NetworkStream stream)
+        private static async Task HandleUserInput(NetworkStream stream)
         {
             try
             {
                 while (true)
                 {
                     var input = Console.ReadLine();
+                    if (input == null)
+                        continue;
+
                     if (input == ":q") break;
+                    
                     byte[] buffer = Encoding.UTF8.GetBytes(input ?? "");
-                    await stream.WriteAsync(buffer).ConfigureAwait(false);
+
+                    await MessageFramer.WriteMessageAsync(stream, buffer);
                 }
             }
             catch (Exception ex)
