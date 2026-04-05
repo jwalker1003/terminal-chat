@@ -14,7 +14,7 @@ namespace ChatClient
                 Console.WriteLine("Connecting to server...");
                 using TcpClient tcpClient = new();
                 tcpClient.Connect(IPAddress.Parse("127.0.0.1"), 9090); // Make configurable
-                Console.WriteLine("Connecting to server!");
+                Console.WriteLine("Connected to server!");
 
                 var stream = tcpClient.GetStream();
                 var readTask = ReadMessages(stream);
@@ -34,15 +34,29 @@ namespace ChatClient
             {
                 while (true)
                 {
-                    byte[] buffer = await MessageFramer.ReadMessageAsync(stream);                      
+                    byte[] buffer = await MessageFramer.ReadMessageAsync(stream);
+                    if (buffer.Length == 0)
+                    {
+                        Console.WriteLine("Server disconnected.");
+                        break;
+                    }
                     var msg = Encoding.UTF8.GetString(buffer);
                     Console.WriteLine(msg);
                 }
             }
+            catch (ObjectDisposedException)
+            {
+                Console.WriteLine("Connection to server was closed.");
+            }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Console.WriteLine($"Error reading from server: {ex.GetType().Name} - {ex.Message}");
             }
+            finally
+            {
+                stream.Close();
+            }
+
         }
 
         private static async Task HandleUserInput(NetworkStream stream)
@@ -59,12 +73,30 @@ namespace ChatClient
                     
                     byte[] buffer = Encoding.UTF8.GetBytes(input ?? "");
 
-                    await MessageFramer.WriteMessageAsync(stream, buffer);
+                    try
+                    {
+                        await MessageFramer.WriteMessageAsync(stream, buffer);
+                    }
+                    catch (IOException ex) when (ex.InnerException is SocketException socketEx && 
+                                                  (socketEx.SocketErrorCode == SocketError.ConnectionReset || 
+                                                   socketEx.SocketErrorCode == SocketError.ConnectionAborted))
+                    {
+                        Console.WriteLine("Connection to server lost.");
+                        break;
+                    }
                 }
+            }
+            catch (ObjectDisposedException)
+            {
+                Console.WriteLine("Connection to server was closed.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Console.WriteLine($"Error writing to server: {ex.GetType().Name} - {ex.Message}");
+            }
+            finally
+            {
+                stream.Close();
             }
         }
     }

@@ -77,9 +77,14 @@ namespace ChatServer
                     await BroadcastByteArray(messageBuffer, client);
                 }
             }
+            catch (ObjectDisposedException)
+            {
+                // Connection was closed/disposed
+                Console.WriteLine($"Client {client.Id} connection was disposed.");
+            }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in LoopReadClientAsync for {client.Id}: {ex.Message}");
+                Console.WriteLine($"Error in LoopReadClientAsync for {client.Id}: {ex.GetType().Name} - {ex.Message}");
             }
             finally
             {
