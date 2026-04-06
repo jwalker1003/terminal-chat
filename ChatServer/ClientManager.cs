@@ -1,4 +1,4 @@
-﻿using Chat.Infrastructure;
+﻿using Chat.Core.Communication;
 using ChatServer.Entities;
 using System.Net;
 using System.Net.Sockets;
@@ -36,7 +36,19 @@ namespace ChatServer
                 {
                     // Get stream from client
                     TcpClient inClient = await listener.AcceptTcpClientAsync();
-                    var client = new ClientConnection(inClient);
+
+                    // Immediately listen for user registration data
+                    // TODO: Ultimately this would be an access token or some other form of authentication, but for now just the username
+                    byte[] registrationData = await MessageFramer.ReadMessageAsync(inClient.GetStream());
+                    if (registrationData == null || registrationData.Length == 0)
+                    {
+                        Console.WriteLine($"Client failed to register.");
+                        continue;
+                    }
+
+                    string userName = Encoding.UTF8.GetString(registrationData, 0, registrationData.Length);
+                    var client = new ClientConnection(inClient, userName);
+
                     await clientGroupLock.WaitAsync();
                     try
                     {
@@ -74,7 +86,7 @@ namespace ChatServer
                     var message = Encoding.UTF8.GetString(messageBuffer, 0, messageBuffer.Length);
                     Console.WriteLine($"[{client.Id}] {DateTime.Now}: {message}");
 
-                    await BroadcastByteArray(messageBuffer, client);
+                    await BroadcastByteArray(DisplayFormatter.FormatMessageForDisplay(messageBuffer, client.User.Username), client);
                 }
             }
             catch (ObjectDisposedException)

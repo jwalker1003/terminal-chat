@@ -1,4 +1,4 @@
-﻿using Chat.Infrastructure;
+﻿using Chat.Core.Communication;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -7,16 +7,22 @@ namespace ChatClient
 {
     internal class ServerConnection
     {
-        public static async Task ConnectToServer()
+        public static async Task ConnectToServer(string userName)
         {
             try
             {
                 Console.WriteLine("Connecting to server...");
                 using TcpClient tcpClient = new();
                 tcpClient.Connect(IPAddress.Parse("127.0.0.1"), 9090); // Make configurable
+
                 Console.WriteLine("Connected to server!");
 
                 var stream = tcpClient.GetStream();
+
+                // Server expects user registration data immediately upon connection
+                // TODO: Ultimately this would be an access token or some other form of authentication, but for now just the username
+                await RegisterUsername(stream, userName);
+
                 var readTask = ReadMessages(stream);
                 var writeTask = HandleUserInput(stream);
 
@@ -26,6 +32,14 @@ namespace ChatClient
             {
                 Console.WriteLine(ex.Message.ToString());
             }
+        }
+
+        // Temp method to send username to server immediately upon connection
+        private static async Task RegisterUsername(NetworkStream stream, string userName)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(userName);
+            await MessageFramer.WriteMessageAsync(stream, buffer);
+            
         }
 
         private static async Task ReadMessages(NetworkStream stream)

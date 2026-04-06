@@ -1,6 +1,6 @@
 using System.Net.Sockets;
 
-namespace Chat.Infrastructure;
+namespace Chat.Core.Communication;
 
 public static class MessageFramer
 {
@@ -8,8 +8,7 @@ public static class MessageFramer
     {
         try
         {
-            if (data == null)
-                throw new ArgumentNullException(nameof(data));
+            ArgumentNullException.ThrowIfNull(data);
 
             byte[] lengthPrefix = BitConverter.GetBytes(data.Length);
             byte[] prefixedData = new byte[lengthPrefix.Length + data.Length];

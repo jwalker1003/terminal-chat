@@ -18,3 +18,5 @@ This is a *sandbox* if you will to learn new concepts and generally broaden my o
 the concept of the Concurrent Collections)
 - ```Memory<T>``` arbitrary contiguous region of memory. Async friendly version of ```Span<T>```. A view into the OG buffer
 - ```Buffer.BlockCopy()``` Copies one buffer to another 
+- Primary Constructors (weird, does not appear to actually solve anything but makes the class definition harder to read. Just give me regular constructors)
+- Collection expressions (this will also take some getting used to..) 
