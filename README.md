@@ -13,4 +13,7 @@ the concept of the Concurrent Collections)
 - ```Buffer.BlockCopy()``` Copies one buffer to another 
 - Primary Constructors (weird, does not appear to actually solve anything but makes the class definition harder to read. Just give me regular constructors)
 - Collection expressions (this will also take some getting used to..) 
-- MessageFramer concept - 
+- MessageFramer concept -
+
+May be then end of the journey with this. After implementing channels I realized this is not quite what the goal of this project was suppose to be. I have to restrain myself from thinking in the mindset of a Discord alt. The ultimate goal was to learn TCP connection handling and MessageFraming. Everything else was superfluous.
+
