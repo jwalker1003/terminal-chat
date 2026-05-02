@@ -1,13 +1,6 @@
 ## Summary 
-This is a *sandbox* if you will to learn new concepts and generally broaden my own horizon.
-
-## TODO 
-- [ ] Create a protocol for messages
-- [ ] Use a thread safe collection instead of the SemaphoreSlim: ConcurrenDictionary
-- [ ] Create a client application for communication  
-   - [ ] Param Name and PortNum?
-- [ ] Create script to add to PATH for terminal invocation
-
+This is a *sandbox* if you will to learn new concepts and generally broaden my own horizon. _Without the use of AI._ 
+This is not meant to be a perfect project - just a learning exercise and AI would defeat the purpose. 
 
 ## Things Learned
 - ```TcpListener``` is a configurable helper class that opens up a port for use of TCP Connections.
@@ -20,3 +13,4 @@ the concept of the Concurrent Collections)
 - ```Buffer.BlockCopy()``` Copies one buffer to another 
 - Primary Constructors (weird, does not appear to actually solve anything but makes the class definition harder to read. Just give me regular constructors)
 - Collection expressions (this will also take some getting used to..) 
+- MessageFramer concept - 
